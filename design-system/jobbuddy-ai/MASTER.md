@@ -18,30 +18,28 @@
 
 | Role | Hex | CSS Variable |
 |------|-----|--------------|
-| Primary | `#0369A1` | `--color-primary` |
-| On Primary | `#FFFFFF` | `--color-on-primary` |
+| Primary | `#ACF417` | `--color-primary` |
+| On Primary | `oklch(0.145 0 0)` (near black) | `--color-primary-foreground` |
 | Secondary | `#0EA5E9` | `--color-secondary` |
 | Accent/CTA | `#16A34A` | `--color-accent` |
-| Background | `#F0F9FF` | `--color-background` |
-| Foreground | `#0C4A6E` | `--color-foreground` |
-| Muted | `#E7EFF5` | `--color-muted` |
-| Border | `#BAE6FD` | `--color-border` |
+| Background | `#FFFFFF` | `--color-background` |
+| Foreground | `oklch(0.145 0 0)` | `--color-foreground` |
+| Muted | `oklch(0.97 0 0)` | `--color-muted` |
+| Muted Foreground | `oklch(0.45 0 0)` | `--color-muted-foreground` |
+| Border | `oklch(0.922 0 0)` | `--color-border` |
 | Destructive | `#DC2626` | `--color-destructive` |
-| Ring | `#0369A1` | `--color-ring` |
+| Ring | `oklch(0.708 0 0)` | `--color-ring` |
 
-**Color Notes:** Professional blue + success green [Accent adjusted from #22C55E for WCAG 3:1]
+**Color Notes:** Bold neon lime green primary — distinctive AI startup branding. Dark foreground on primary for WCAG AA+ contrast. Use #ACF417 only as a background color with dark text, never as text on light backgrounds.
 
 ### Typography
 
-- **Heading Font:** Fira Code
-- **Body Font:** Fira Sans
-- **Mood:** dashboard, data, analytics, code, technical, precise
-- **Google Fonts:** [Fira Code + Fira Sans](https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap)
+- **Heading Font:** Geist (variable)
+- **Body Font:** Inter
+- **Mood:** modern, clean, startup, AI, tech, dashboard
+- **Google Fonts:** Inter + Geist (both variable, included via next/font)
 
-**CSS Import:**
-```css
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
-```
+**CSS Import:** (Handled by next/font/google in app/layout.tsx — no manual @import needed)
 
 ### Spacing Variables
 
@@ -73,8 +71,8 @@
 ```css
 /* Primary Button */
 .btn-primary {
-  background: #16A34A;
-  color: white;
+  background: #ACF417;
+  color: #0C0C0C;
   padding: 12px 24px;
   border-radius: 8px;
   font-weight: 600;
@@ -90,8 +88,8 @@
 /* Secondary Button */
 .btn-secondary {
   background: transparent;
-  color: #0369A1;
-  border: 2px solid #0369A1;
+  color: #ACF417;
+  border: 2px solid #ACF417;
   padding: 12px 24px;
   border-radius: 8px;
   font-weight: 600;
@@ -130,9 +128,9 @@
 }
 
 .input:focus {
-  border-color: #0369A1;
+  border-color: #ACF417;
   outline: none;
-  box-shadow: 0 0 0 3px #0369A120;
+  box-shadow: 0 0 0 3px #ACF41720;
 }
 ```
 
@@ -158,11 +156,11 @@
 
 ## Style Guidelines
 
-**Style:** Flat Design
+**Style:** Soft UI Evolution / shadcn/ui neutral
 
-**Keywords:** 2D, minimalist, bold colors, no shadows, clean lines, simple shapes, typography-focused, modern, icon-heavy
+**Keywords:** evolved soft UI, better contrast, modern aesthetics, subtle depth, accessibility-focused, improved shadows, hybrid, bold accent
 
-**Best For:** Web apps, mobile apps, cross-platform, startup MVPs, user-friendly, SaaS, dashboards, corporate
+**Best For:** Modern enterprise apps, SaaS platforms, AI tools, professional dashboards
 
 **Key Effects:** No gradients/shadows, simple hover (color/opacity shift), fast loading, clean transitions (150-200ms ease), minimal icons
 
@@ -180,8 +178,19 @@
 
 - ❌ Outdated forms
 - ❌ Hidden filters
+- ❌ Emojis as icons
+- ❌ Low contrast text (< 4.5:1)
+- ❌ Placeholder-only inputs (no visible labels)
+- ❌ Instant state changes (no transitions)
+- ❌ Touch targets < 44px
 
-### Additional Forbidden Patterns
+### Icon Library
+
+**Hugeicons** (`@hugeicons/react` + `@hugeicons/core-free-icons`) — unified icon library for all UI components and app pages.
+
+- Import: `import { HugeiconsIcon } from "@hugeicons/react"`
+- Icons: `import { ... } from "@hugeicons/core-free-icons"`
+- Usage: `<HugeiconsIcon icon={ExampleIcon} strokeWidth={2} />`
 
 - ❌ **Emojis as icons** — Use SVG icons (Heroicons, Lucide, Simple Icons)
 - ❌ **Missing cursor:pointer** — All clickable elements must have cursor:pointer
@@ -197,7 +206,7 @@
 Before delivering any UI code, verify:
 
 - [ ] No emojis used as icons (use SVG instead)
-- [ ] All icons from consistent icon set (Heroicons/Lucide)
+- [ ] All icons from consistent icon set (Hugeicons)
 - [ ] `cursor-pointer` on all clickable elements
 - [ ] Hover states with smooth transitions (150-300ms)
 - [ ] Light mode: text contrast 4.5:1 minimum
