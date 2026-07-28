@@ -82,8 +82,14 @@ export default async function DashboardPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
-          <Button render={<Link href="/dashboard/jobs" />}>Browse jobs</Button>
-          <Button variant="outline" render={<Link href="/dashboard/resume" />}>
+          <Button nativeButton={false} render={<Link href="/dashboard/jobs" />}>
+            Browse jobs
+          </Button>
+          <Button
+            nativeButton={false}
+            variant="outline"
+            render={<Link href="/dashboard/resume" />}
+          >
             Create resume
           </Button>
         </CardContent>

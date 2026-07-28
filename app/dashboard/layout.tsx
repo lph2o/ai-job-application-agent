@@ -10,6 +10,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { createClient } from "@/lib/supabase/server"
+import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog"
 
 export default async function DashboardLayout({
   children,
@@ -40,6 +41,14 @@ export default async function DashboardLayout({
   const defaultOpen =
     cookieStore.get("sidebar_state")?.value === "true" ? true : undefined
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("onboarded")
+    .eq("id", user.sub)
+    .single()
+
+  const needsOnboarding = !profile?.onboarded
+
   return (
     <SidebarProvider defaultOpen={defaultOpen ?? true}>
       <AppSidebar />
@@ -60,6 +69,7 @@ export default async function DashboardLayout({
           </div>
         </header>
         {children}
+        {needsOnboarding && <OnboardingDialog open={true} />}
       </SidebarInset>
     </SidebarProvider>
   )

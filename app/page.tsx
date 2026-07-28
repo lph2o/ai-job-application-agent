@@ -20,15 +20,28 @@ export default async function Home() {
           </div>
           <div className="flex items-center gap-2">
             {isSignedIn ? (
-              <Button size="sm" render={<Link href="/dashboard" />}>
+              <Button
+                nativeButton={false}
+                size="sm"
+                render={<Link href="/dashboard" />}
+              >
                 Dashboard
               </Button>
             ) : (
               <>
-                <Button variant="ghost" size="sm" render={<Link href="/sign-in" />}>
+                <Button
+                  nativeButton={false}
+                  variant="ghost"
+                  size="sm"
+                  render={<Link href="/sign-in" />}
+                >
                   Sign in
                 </Button>
-                <Button size="sm" render={<Link href="/sign-up" />}>
+                <Button
+                  nativeButton={false}
+                  size="sm"
+                  render={<Link href="/sign-up" />}
+                >
                   Get started
                 </Button>
               </>
@@ -53,15 +66,24 @@ export default async function Home() {
 
         <div className="flex flex-wrap gap-3">
           {isSignedIn ? (
-            <Button size="lg" render={<Link href="/dashboard" />}>
+            <Button
+              nativeButton={false}
+              size="lg"
+              render={<Link href="/dashboard" />}
+            >
               Go to dashboard
             </Button>
           ) : (
             <>
-              <Button size="lg" render={<Link href="/sign-up" />}>
+              <Button
+                nativeButton={false}
+                size="lg"
+                render={<Link href="/sign-up" />}
+              >
                 Create free account
               </Button>
               <Button
+                nativeButton={false}
                 variant="outline"
                 size="lg"
                 render={<Link href="/sign-in" />}

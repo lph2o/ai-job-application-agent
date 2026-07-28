@@ -2,15 +2,16 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { HugeiconsIcon } from "@hugeicons/react"
 import {
-  Briefcase,
-  ChartLine,
-  Coin,
-  CreditCard,
-  FileText,
-  Gear,
-  User,
-} from "@phosphor-icons/react"
+  BriefcaseIcon,
+  ChartLineIcon,
+  CoinsIcon,
+  CreditCardIcon,
+  File01Icon,
+  GearsIcon,
+  UserIcon,
+} from "@hugeicons/core-free-icons"
 import * as React from "react"
 
 import {
@@ -32,19 +33,19 @@ import { cn } from "@/lib/utils"
 type NavItem = {
   title: string
   href: string
-  icon: React.ComponentType<{ className?: string }>
+  icon: React.ComponentProps<typeof HugeiconsIcon>["icon"]
 }
 
 const navigation: NavItem[] = [
-  { title: "Jobs", href: "/dashboard/jobs", icon: Briefcase },
-  { title: "Resume", href: "/dashboard/resume", icon: FileText },
-  { title: "Profile", href: "/dashboard/profile", icon: User },
-  { title: "Application Status", href: "/dashboard/application-status", icon: ChartLine },
+  { title: "Jobs", href: "/dashboard/jobs", icon: BriefcaseIcon },
+  { title: "Resume", href: "/dashboard/resume", icon: File01Icon },
+  { title: "Profile", href: "/dashboard/profile", icon: UserIcon },
+  { title: "Application Status", href: "/dashboard/application-status", icon: ChartLineIcon },
 ]
 
 const footerNavigation: NavItem[] = [
-  { title: "Billing / Credits", href: "/dashboard/billing", icon: CreditCard },
-  { title: "Profile Settings", href: "/dashboard/settings", icon: Gear },
+  { title: "Billing / Credits", href: "/dashboard/billing", icon: CreditCardIcon },
+  { title: "Profile Settings", href: "/dashboard/settings", icon: GearsIcon },
 ]
 
 function AppLogo({ className }: { className?: string }) {
@@ -91,7 +92,7 @@ function SidebarLogo() {
 function SidebarMenuLink({
   href,
   title,
-  icon: Icon,
+  icon,
   isActive,
 }: NavItem & { isActive: boolean }) {
   return (
@@ -114,7 +115,9 @@ function SidebarMenuLink({
               )}
               aria-hidden="true"
             />
-            <Icon
+            <HugeiconsIcon
+              icon={icon}
+              strokeWidth={2}
               className={cn(
                 "size-5 shrink-0 transition-colors",
                 isActive ? "text-primary" : "text-sidebar-foreground/70"
@@ -149,10 +152,10 @@ function CreditsSection({
         )}
       >
         <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <Coin className="size-4" weight="fill" />
+          <HugeiconsIcon icon={CoinsIcon} strokeWidth={2} className="size-4" />
         </div>
         <div className={cn("min-w-0", isCollapsed && "sr-only")}>
-          <p className="text-xs text-muted-foreground">Available credits</p>
+          <p className="text-sm text-muted-foreground">Available credits</p>
           <p className="text-sm font-semibold text-foreground">
             {credits} credits
           </p>
@@ -175,7 +178,7 @@ export function AppSidebar() {
 
       <SidebarContent className="py-5">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/60">
+          <SidebarGroupLabel className="text-sm font-semibold uppercase tracking-wider text-sidebar-foreground/60">
             Menu
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -194,7 +197,7 @@ export function AppSidebar() {
 
       <SidebarFooter className="mt-auto border-t border-sidebar-border/50 py-4">
         <SidebarGroup className="px-0 py-0">
-          <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/60">
+          <SidebarGroupLabel className="text-sm font-semibold uppercase tracking-wider text-sidebar-foreground/60">
             Credits
           </SidebarGroupLabel>
           <CreditsSection isCollapsed={isCollapsed} />
