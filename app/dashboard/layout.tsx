@@ -1,13 +1,11 @@
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
-import { SignOutButton } from "@/components/auth/sign-out-button"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { AppSidebar } from "@/components/dashboard/app-sidebar"
+import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import {
   SidebarInset,
   SidebarProvider,
-  SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { createClient } from "@/lib/supabase/server"
 import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog"
@@ -51,23 +49,17 @@ export default async function DashboardLayout({
 
   return (
     <SidebarProvider defaultOpen={defaultOpen ?? true}>
-      <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-14 items-center justify-between border-b bg-background px-6">
-          <div className="flex items-center gap-2">
-            <SidebarTrigger />
-            <span className="text-sm font-medium">JobBuddy AI</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="hidden items-center gap-2 sm:flex">
-              <Avatar size="sm">
-                <AvatarFallback>{initials}</AvatarFallback>
-              </Avatar>
-              <span className="text-sm text-muted-foreground">{email}</span>
-            </div>
-            <SignOutButton />
-          </div>
-        </header>
+      <AppSidebar
+        userName={fullName}
+        userEmail={email}
+        userInitials={initials}
+      />
+      <SidebarInset className="bg-muted/20">
+        <DashboardHeader
+          fullName={fullName}
+          email={email}
+          initials={initials}
+        />
         {children}
         {needsOnboarding && <OnboardingDialog open={true} />}
       </SidebarInset>

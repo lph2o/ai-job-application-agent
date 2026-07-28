@@ -10,6 +10,7 @@ import {
   CreditCardIcon,
   File01Icon,
   GearsIcon,
+  SparklesIcon,
   UserIcon,
 } from "@hugeicons/core-free-icons"
 import * as React from "react"
@@ -20,7 +21,6 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -28,42 +28,58 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 
 type NavItem = {
   title: string
   href: string
   icon: React.ComponentProps<typeof HugeiconsIcon>["icon"]
+  description?: string
 }
 
 const navigation: NavItem[] = [
-  { title: "Jobs", href: "/dashboard/jobs", icon: BriefcaseIcon },
-  { title: "Resume", href: "/dashboard/resume", icon: File01Icon },
-  { title: "Profile", href: "/dashboard/profile", icon: UserIcon },
-  { title: "Application Status", href: "/dashboard/application-status", icon: ChartLineIcon },
+  {
+    title: "Jobs",
+    href: "/dashboard/jobs",
+    icon: BriefcaseIcon,
+    description: "Discover & apply",
+  },
+  {
+    title: "Resume",
+    href: "/dashboard/resume",
+    icon: File01Icon,
+    description: "Upload & parse",
+  },
+  {
+    title: "Profile",
+    href: "/dashboard/profile",
+    icon: UserIcon,
+    description: "Your identity",
+  },
+  {
+    title: "Applications",
+    href: "/dashboard/application-status",
+    icon: ChartLineIcon,
+    description: "Track progress",
+  },
 ]
 
 const footerNavigation: NavItem[] = [
-  { title: "Billing / Credits", href: "/dashboard/billing", icon: CreditCardIcon },
-  { title: "Profile Settings", href: "/dashboard/settings", icon: GearsIcon },
+  { title: "Billing", href: "/dashboard/billing", icon: CreditCardIcon },
+  { title: "Settings", href: "/dashboard/settings", icon: GearsIcon },
 ]
 
 function AppLogo({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 32 32" fill="none" className={className}>
-      <rect width="32" height="32" rx="8" fill="currentColor" />
-      <path
-        d="M8 12.5C8 11.1193 9.11929 10 10.5 10h11c1.3807 0 2.5 1.1193 2.5 2.5v7c0 1.3807-1.1193 2.5-2.5 2.5h-11C9.11929 22 8 20.8807 8 19.5v-7Z"
-        fill="white"
-      />
-      <path
-        d="M14.5 15.5L17 17.5L17 13.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <div
+      className={cn(
+        "relative flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_0_20px_rgba(172,244,23,0.25)]",
+        className
+      )}
+    >
+      <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} className="size-4.5" />
+    </div>
   )
 }
 
@@ -73,18 +89,16 @@ function SidebarLogo() {
 
   return (
     <Link
-      href="/dashboard"
-      className="flex items-center gap-3 px-2 py-2 text-foreground transition-opacity hover:opacity-80"
+      href="/dashboard/jobs"
+      className="group flex items-center gap-3 rounded-xl px-2 py-2 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-sidebar-accent/50"
     >
-      <AppLogo className="size-8 shrink-0" />
-      <span
-        className={cn(
-          "text-base font-semibold tracking-tight transition-opacity duration-200",
-          isCollapsed && "sr-only opacity-0"
-        )}
-      >
-        JobBuddy AI
-      </span>
+      <AppLogo />
+      <div className={cn("min-w-0 transition-opacity duration-200", isCollapsed && "sr-only opacity-0")}>
+        <span className="block text-sm font-semibold tracking-tight">JobBuddy</span>
+        <span className="block text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+          AI Agent
+        </span>
+      </div>
     </Link>
   )
 }
@@ -93,37 +107,55 @@ function SidebarMenuLink({
   href,
   title,
   icon,
+  description,
   isActive,
 }: NavItem & { isActive: boolean }) {
+  const { state } = useSidebar()
+  const isCollapsed = state === "collapsed"
+
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
         isActive={isActive}
         tooltip={title}
         className={cn(
-          "relative h-11 text-sm transition-colors",
-          "[&_svg]:size-5",
-          isActive &&
-            "bg-primary/10 font-semibold text-primary hover:bg-primary/15 hover:text-primary"
+          "group/nav relative h-auto min-h-[44px] overflow-hidden rounded-xl px-3 py-2.5 transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]",
+          "[&_svg]:size-[18px]",
+          isActive
+            ? "bg-[#ACF418]/15 text-foreground font-bold border border-[#ACF418]/40 shadow-xs dark:bg-[#ACF418]/20"
+            : "text-muted-foreground hover:bg-sidebar-accent/80 hover:text-foreground font-medium"
         )}
         render={
           <Link href={href} className="flex w-full items-center gap-3">
+            {/* Active Pill Indicator on Left edge */}
+            {isActive && (
+              <div className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-[#ACF418] shadow-[0_0_8px_#ACF418] animate-in fade-in-50 duration-200" />
+            )}
+
             <span
               className={cn(
-                "absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-primary transition-opacity group-data-[collapsible=icon]:hidden",
-                isActive ? "opacity-100" : "opacity-0"
+                "flex size-8 shrink-0 items-center justify-center rounded-lg transition-all duration-200",
+                isActive
+                  ? "bg-[#ACF418] text-black shadow-xs"
+                  : "bg-muted/50 text-muted-foreground group-hover/nav:bg-muted group-hover/nav:text-foreground"
               )}
-              aria-hidden="true"
-            />
-            <HugeiconsIcon
-              icon={icon}
-              strokeWidth={2}
-              className={cn(
-                "size-5 shrink-0 transition-colors",
-                isActive ? "text-primary" : "text-sidebar-foreground/70"
+            >
+              <HugeiconsIcon icon={icon} strokeWidth={isActive ? 2.5 : 2} className="size-4.5" />
+            </span>
+
+            <span className={cn("min-w-0 flex-1", isCollapsed && "sr-only")}>
+              <span className="block truncate text-xs font-bold tracking-tight text-foreground">{title}</span>
+              {description && !isCollapsed && (
+                <span
+                  className={cn(
+                    "block truncate text-[10px] leading-tight",
+                    isActive ? "text-foreground/80 font-semibold" : "text-muted-foreground/80 font-normal"
+                  )}
+                >
+                  {description}
+                </span>
               )}
-            />
-            <span className="truncate">{title}</span>
+            </span>
           </Link>
         }
       />
@@ -138,56 +170,90 @@ function CreditsSection({
   isCollapsed: boolean
   credits?: number
 }) {
+  const maxCredits = 200
+  const pct = Math.min(100, Math.round((credits / maxCredits) * 100))
+
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-lg border border-primary/30 bg-primary/5 p-3 shadow-sm transition-all",
-        isCollapsed && "px-2 py-3"
+        "overflow-hidden rounded-xl bg-sidebar-accent/30 p-1 ring-1 ring-foreground/[0.06] dark:ring-white/[0.08]",
+        isCollapsed && "p-1"
       )}
     >
       <div
         className={cn(
-          "flex items-center gap-3",
-          isCollapsed && "justify-center"
+          "rounded-[calc(0.75rem-0.25rem)] bg-sidebar p-3",
+          isCollapsed && "flex justify-center p-2"
         )}
       >
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <HugeiconsIcon icon={CoinsIcon} strokeWidth={2} className="size-4" />
-        </div>
-        <div className={cn("min-w-0", isCollapsed && "sr-only")}>
-          <p className="text-sm text-muted-foreground">Available credits</p>
-          <p className="text-sm font-semibold text-foreground">
-            {credits} credits
-          </p>
+        <div className={cn("flex items-center gap-3", isCollapsed && "justify-center")}>
+          <div className="relative flex size-10 shrink-0 items-center justify-center">
+            <svg className="absolute inset-0 -rotate-90" viewBox="0 0 40 40" aria-hidden>
+              <circle cx="20" cy="20" r="16" fill="none" stroke="currentColor" strokeWidth="3" className="text-muted/40" />
+              <circle
+                cx="20"
+                cy="20"
+                r="16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeDasharray={`${(pct / 100) * 100.53} 100.53`}
+                className="text-primary transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]"
+              />
+            </svg>
+            <HugeiconsIcon icon={CoinsIcon} strokeWidth={2} className="size-3.5 text-primary" />
+          </div>
+          <div className={cn("min-w-0 flex-1", isCollapsed && "sr-only")}>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Credits
+            </p>
+            <p className="text-sm font-semibold tabular-nums">
+              {credits}
+              <span className="ml-1 text-xs font-normal text-muted-foreground">/ {maxCredits}</span>
+            </p>
+          </div>
         </div>
       </div>
     </div>
   )
 }
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  userName?: string
+  userEmail?: string
+  userInitials?: string
+}
+
+export function AppSidebar({
+  userName = "User",
+  userEmail,
+  userInitials = "U",
+}: AppSidebarProps) {
   const pathname = usePathname()
   const { state } = useSidebar()
   const isCollapsed = state === "collapsed"
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border/50 py-4">
+    <Sidebar
+      collapsible="icon"
+      className="border-r border-border/50 bg-sidebar/50 backdrop-blur-xl [&_[data-slot=sidebar-inner]]:bg-sidebar/80 [&_[data-slot=sidebar-inner]]:backdrop-blur-xl"
+    >
+      <SidebarHeader className="border-b border-border/40 px-3 py-4">
         <SidebarLogo />
       </SidebarHeader>
 
-      <SidebarContent className="py-5">
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sm font-semibold uppercase tracking-wider text-sidebar-foreground/60">
-            Menu
-          </SidebarGroupLabel>
+      <SidebarContent className="gap-0 px-2 py-4">
+        <SidebarGroup className="px-0 py-0">
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-1">
               {navigation.map((item) => (
                 <SidebarMenuLink
                   key={item.href}
                   {...item}
-                  isActive={pathname === item.href || pathname.startsWith(`${item.href}/`)}
+                  isActive={
+                    pathname === item.href || pathname.startsWith(`${item.href}/`)
+                  }
                 />
               ))}
             </SidebarMenu>
@@ -195,27 +261,50 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="mt-auto border-t border-sidebar-border/50 py-4">
-        <SidebarGroup className="px-0 py-0">
-          <SidebarGroupLabel className="text-sm font-semibold uppercase tracking-wider text-sidebar-foreground/60">
-            Credits
-          </SidebarGroupLabel>
-          <CreditsSection isCollapsed={isCollapsed} />
-        </SidebarGroup>
+      <SidebarFooter className="mt-auto gap-3 border-t border-sidebar-border/40 px-2 py-4">
+        <CreditsSection isCollapsed={isCollapsed} />
 
         <SidebarGroup className="px-0 py-0">
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-0.5">
               {footerNavigation.map((item) => (
                 <SidebarMenuLink
                   key={item.href}
                   {...item}
-                  isActive={pathname === item.href || pathname.startsWith(`${item.href}/`)}
+                  isActive={
+                    pathname === item.href || pathname.startsWith(`${item.href}/`)
+                  }
                 />
               ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        <div
+          className={cn(
+            "overflow-hidden rounded-xl bg-sidebar-accent/30 p-1 ring-1 ring-foreground/[0.06] dark:ring-white/[0.08]",
+            isCollapsed && "flex justify-center"
+          )}
+        >
+          <div
+            className={cn(
+              "flex items-center gap-2.5 rounded-[calc(0.75rem-0.25rem)] bg-sidebar p-2.5",
+              isCollapsed && "justify-center p-2"
+            )}
+          >
+            <Avatar size="sm">
+              <AvatarFallback className="bg-primary/15 text-xs font-semibold text-primary">
+                {userInitials}
+              </AvatarFallback>
+            </Avatar>
+            <div className={cn("min-w-0 flex-1", isCollapsed && "sr-only")}>
+              <p className="truncate text-sm font-medium">{userName}</p>
+              {userEmail && (
+                <p className="truncate text-[11px] text-muted-foreground">{userEmail}</p>
+              )}
+            </div>
+          </div>
+        </div>
       </SidebarFooter>
 
       <SidebarRail />

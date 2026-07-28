@@ -48,6 +48,7 @@ export function CircularProgress({
           cy={size / 2}
           r={radius}
           fill="none"
+          stroke="currentColor"
           strokeWidth={strokeWidth}
           className={cn("text-muted", trackClassName)}
         />
@@ -56,6 +57,7 @@ export function CircularProgress({
           cy={size / 2}
           r={radius}
           fill="none"
+          stroke="currentColor"
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
           strokeDashoffset={offset}

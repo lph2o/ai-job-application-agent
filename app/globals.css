@@ -130,6 +130,82 @@
   }
 }
 
+/* ── Job description HTML prose ───────────────────────────────────────────── */
+.job-desc-html {
+  font-size: 0.75rem;        /* 12px */
+  line-height: 1.65;
+  color: var(--muted-foreground);
+}
+
+.job-desc-html p {
+  margin-bottom: 0.5rem;
+}
+.job-desc-html p:last-child {
+  margin-bottom: 0;
+}
+
+.job-desc-html h1,
+.job-desc-html h2,
+.job-desc-html h3 {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.job-desc-html h4,
+.job-desc-html h5,
+.job-desc-html h6 {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin-top: 0.5rem;
+  margin-bottom: 0.2rem;
+}
+
+.job-desc-html ul,
+.job-desc-html ol {
+  padding-left: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.job-desc-html ul {
+  list-style-type: disc;
+}
+
+.job-desc-html ol {
+  list-style-type: decimal;
+}
+
+.job-desc-html li {
+  margin-bottom: 0.2rem;
+}
+
+.job-desc-html strong,
+.job-desc-html b {
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.job-desc-html em,
+.job-desc-html i {
+  font-style: italic;
+}
+
+.job-desc-html a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.job-desc-html hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0.75rem 0;
+}
+
+/* ── Reduced-motion ────────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

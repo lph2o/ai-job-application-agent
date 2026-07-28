@@ -182,3 +182,10 @@ export function getProgressBackgroundColor(percentage: number): string {
   if (percentage < 80) return "bg-blue-500/10"
   return "bg-emerald-500/10"
 }
+
+export function getProgressIndicatorColor(percentage: number): string {
+  if (percentage < 30) return "bg-destructive"
+  if (percentage < 60) return "bg-amber-500"
+  if (percentage < 80) return "bg-blue-500"
+  return "bg-emerald-500"
+}
