@@ -11,14 +11,22 @@ import {
   Bookmark02Icon,
   CheckmarkCircle02Icon,
   UserIcon,
-  Calendar01Icon,
   Link01Icon,
+  SparklesIcon,
+  AlertCircleIcon,
+  Loading02Icon,
+  ViewIcon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { PlatformLogo } from "@/components/jobs/platform-logo"
+import { ApplyModal } from "@/components/jobs/apply-modal"
+import { MissingFieldsDialog } from "@/components/jobs/missing-fields-dialog"
+import { UnknownFieldsDialog } from "@/components/jobs/unknown-fields-dialog"
+import { resumeAfterHumanVerification } from "@/app/actions/jobs"
 import { getPlatform } from "@/lib/jobs/schema"
 import { cn } from "@/lib/utils"
+import { toast } from "@/components/ui/toast"
 
 /** Strip only dangerous tags/attributes — keeps formatting HTML intact */
 function sanitizeHtml(raw: string): string {
@@ -51,8 +59,16 @@ interface JobCardProps {
   jobUrl: string
   savedStatus: boolean
   appliedStatus?: boolean
+  applicationStatus?: string | null
+  missingFields?: string[] | null
+  browserbaseSessionId?: string | null
+  browserbaseDebugUrl?: string | null
+  applicationError?: string | null
+  unknownFormFields?: Array<{ label: string; name: string; type: string }> | null
   onSave: (id: string, saved: boolean) => void
   onApply: (id: string) => void
+  onManualApply?: (id: string, url: string) => void
+  onAutoApply?: (id: string) => Promise<void>
 }
 
 /* ─── Platform accent colours ─────────────────────────────────────────────── */
@@ -159,10 +175,22 @@ export function JobCard({
   jobUrl,
   savedStatus,
   appliedStatus = false,
+  applicationStatus,
+  missingFields,
+  browserbaseSessionId,
+  browserbaseDebugUrl,
+  applicationError,
+  unknownFormFields,
   onSave,
   onApply,
+  onManualApply,
+  onAutoApply,
 }: JobCardProps) {
   const [expanded, setExpanded] = React.useState(false)
+  const [isApplyModalOpen, setIsApplyModalOpen] = React.useState(false)
+  const [isMissingModalOpen, setIsMissingModalOpen] = React.useState(false)
+  const [isUnknownFieldsModalOpen, setIsUnknownFieldsModalOpen] = React.useState(false)
+
   const platformMeta = getPlatform(platform)
   const ps = platformStyles[platform] ?? {
     badge: "bg-muted/60 text-muted-foreground",
@@ -174,232 +202,599 @@ export function JobCard({
   const descIsHtml = hasDescription && isHtml(description!)
   const isLong = hasDescription && description!.length > 120
 
+  const handleApplyClick = () => {
+    if (appliedStatus) return
+    if (onManualApply && onAutoApply) {
+      setIsApplyModalOpen(true)
+    } else {
+      onApply(id)
+    }
+  }
+
+  const isDetecting = applicationStatus === "detecting_fields"
+  const isApplying = applicationStatus === "applying"
+  const isMissingInfo = applicationStatus === "missing_profile_info"
+  const isUnknownFormFields = applicationStatus === "unknown_form_fields"
+  const isNeedsHuman = applicationStatus === "needs_human_verification"
+  const isFailed = applicationStatus === "failed"
+  const isUncertain = applicationStatus === "uncertain"
+  const isCompleted = appliedStatus || applicationStatus === "applied"
+  const isQueued = isDetecting || isApplying
+
+  // Priority-ordered status label to surface the most actionable state
+  const statusLabel = React.useMemo(() => {
+    if (isCompleted) return { label: "Applied", color: "emerald", icon: CheckmarkCircle02Icon }
+    if (isNeedsHuman) return { label: "Needs Human Help", color: "primary", icon: AlertCircleIcon }
+    if (isUnknownFormFields) return { label: "Unknown Fields", color: "rose", icon: AlertCircleIcon }
+    if (isMissingInfo) return { label: "Missing Info", color: "amber", icon: AlertCircleIcon }
+    if (isFailed) return { label: "Application Failed", color: "rose", icon: AlertCircleIcon }
+    if (isUncertain) return { label: "Submission Uncertain", color: "amber", icon: AlertCircleIcon }
+    if (isApplying) return { label: "Applying (AI)...", color: "blue", icon: SparklesIcon }
+    if (isDetecting) return { label: "Detecting Form Fields...", color: "amber", icon: Loading02Icon }
+    return null
+  }, [isCompleted, isNeedsHuman, isUnknownFormFields, isMissingInfo, isFailed, isUncertain, isApplying, isDetecting])
+
+  const statusColorClasses: Record<string, { bg: string; text: string; ring: string }> = {
+    emerald: { bg: "bg-emerald-500/10", text: "text-emerald-600 dark:text-emerald-400", ring: "ring-emerald-500/20" },
+    blue: { bg: "bg-blue-500/10", text: "text-blue-600 dark:text-blue-400", ring: "ring-blue-500/20" },
+    amber: { bg: "bg-amber-500/10", text: "text-amber-600 dark:text-amber-400", ring: "ring-amber-500/20" },
+    rose: { bg: "bg-rose-500/10", text: "text-rose-600 dark:text-rose-400", ring: "ring-rose-500/20" },
+    primary: { bg: "bg-primary/10", text: "text-primary", ring: "ring-primary/20" },
+  }
+
   return (
-    <Card
-      className={cn(
-        "group/job relative overflow-hidden border border-border/50 bg-card/80 backdrop-blur-sm",
-        "transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-        "hover:-translate-y-0.5 hover:border-border/80 hover:bg-card hover:shadow-xl hover:shadow-black/8",
-        appliedStatus && "border-emerald-500/25 bg-emerald-500/3"
-      )}
-    >
-      {/* Platform accent top-bar */}
-      <div
-        className={cn(
-          "absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r opacity-80",
-          ps.accent
-        )}
+    <>
+      <ApplyModal
+        isOpen={isApplyModalOpen}
+        onClose={() => setIsApplyModalOpen(false)}
+        jobId={id}
+        jobTitle={title}
+        company={company}
+        jobUrl={jobUrl}
+        onManualApply={(jId, url) => {
+          if (onManualApply) onManualApply(jId, url)
+          else window.open(url, "_blank", "noopener,noreferrer")
+        }}
+        onAutoApply={async (jId) => {
+          if (onAutoApply) await onAutoApply(jId)
+        }}
       />
 
-      <CardContent className="p-5">
-        {/* ── Row 1: Logo · Title · Score ──────────────────────────────────── */}
-        <div className="flex items-start gap-3.5">
-          {/* Logo */}
-          <div
-            className={cn(
-              "relative flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl",
-              "bg-gradient-to-br from-muted/80 to-muted ring-1 ring-inset shadow-inner",
-              ps.ring,
-              "transition-transform duration-300 group-hover/job:scale-105"
-            )}
-          >
-            {companyLogo ? (
-              <img src={companyLogo} alt={company} className="size-full rounded-2xl object-cover" />
-            ) : (
-              <span className="text-sm font-extrabold uppercase tracking-wide text-primary">
-                {company.substring(0, 2)}
-              </span>
-            )}
-          </div>
+      <MissingFieldsDialog
+        isOpen={isMissingModalOpen}
+        onClose={() => setIsMissingModalOpen(false)}
+        jobId={id}
+        jobTitle={title}
+        company={company}
+        missingFields={missingFields || []}
+        onSuccess={async () => {
+          if (onAutoApply) await onAutoApply(id)
+        }}
+      />
 
-          {/* Title + Company */}
-          <div className="min-w-0 flex-1 space-y-0.5">
-            <div className="flex flex-wrap items-start gap-2">
-              <h3 className="text-sm font-bold leading-snug tracking-tight text-foreground transition-colors group-hover/job:text-primary">
-                {title}
-              </h3>
-              {appliedStatus && (
-                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 ring-1 ring-inset ring-emerald-500/20">
-                  <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2.5} className="size-3" />
-                  Applied
+      <UnknownFieldsDialog
+        isOpen={isUnknownFieldsModalOpen}
+        onClose={() => setIsUnknownFieldsModalOpen(false)}
+        jobId={id}
+        jobTitle={title}
+        company={company}
+        unknownFields={unknownFormFields || []}
+        onSuccess={async () => {
+          if (onAutoApply) await onAutoApply(id)
+        }}
+      />
+
+      <Card
+        className={cn(
+          "group/job relative overflow-hidden border border-border/50 bg-card/80 backdrop-blur-sm",
+          "transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+          "hover:-translate-y-0.5 hover:border-border/80 hover:bg-card hover:shadow-xl hover:shadow-black/8",
+          isCompleted && "border-emerald-500/25 bg-emerald-500/3",
+          isMissingInfo && "border-amber-500/30 bg-amber-500/3",
+          isUnknownFormFields && "border-rose-500/30 bg-rose-500/3",
+          isUncertain && "border-amber-500/30 bg-amber-500/3",
+          isNeedsHuman && "border-primary/30 bg-primary/5",
+          isFailed && "border-rose-500/30 bg-rose-500/3",
+          isQueued && "border-blue-500/30 bg-blue-500/3"
+        )}
+      >
+        {/* Platform accent top-bar */}
+        <div
+          className={cn(
+            "absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r opacity-80",
+            ps.accent
+          )}
+        />
+
+        {/* Status accent left border */}
+        <div
+          className={cn(
+            "absolute inset-y-0 left-0 w-[3px] transition-colors duration-300",
+            isCompleted ? "bg-emerald-500" :
+            isFailed || isUnknownFormFields ? "bg-rose-500" :
+            isNeedsHuman ? "bg-primary" :
+            isMissingInfo || isUncertain || isDetecting ? "bg-amber-500" :
+            isApplying ? "bg-blue-500" :
+            "bg-transparent"
+          )}
+        />
+
+        <CardContent className="p-5 pl-6">
+          {/* ── Row 1: Logo · Title · Score ──────────────────────────────────── */}
+          <div className="flex items-start gap-3.5">
+            {/* Logo */}
+            <div
+              className={cn(
+                "relative flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl",
+                "bg-gradient-to-br from-muted/80 to-muted ring-1 ring-inset shadow-inner",
+                ps.ring,
+                "transition-transform duration-300 group-hover/job:scale-105"
+              )}
+            >
+              {companyLogo ? (
+                <img src={companyLogo} alt={company} className="size-full rounded-2xl object-cover" />
+              ) : (
+                <span className="text-sm font-extrabold uppercase tracking-wide text-primary">
+                  {company.substring(0, 2)}
                 </span>
               )}
             </div>
-            <p className="text-xs font-semibold text-muted-foreground">{company}</p>
 
-            {/* Platform badge */}
-            <span
-              className={cn(
-                "mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset",
-                ps.badge,
-                ps.ring
-              )}
-            >
-              <PlatformLogo platform={platform} size="xs" />
-              {platformMeta?.label ?? platform}
-            </span>
-          </div>
-
-          {/* Match Score Ring */}
-          <div className="shrink-0 flex flex-col items-center gap-0.5">
-            <ScoreRing score={matchScore} />
-            <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/60">
-              Match
-            </span>
-          </div>
-        </div>
-
-        {/* ── Row 2: Meta chips ─────────────────────────────────────────────── */}
-        <div className="mt-3.5 flex flex-wrap gap-1.5">
-          {location && (
-            <MetaChip
-              icon={Location01Icon}
-              label={location}
-              colorClass="bg-sky-500/8 text-sky-700 dark:text-sky-400 ring-sky-500/20"
-            />
-          )}
-          {jobType && (
-            <MetaChip
-              icon={Clock01Icon}
-              label={jobType}
-              colorClass="bg-violet-500/8 text-violet-700 dark:text-violet-400 ring-violet-500/20"
-            />
-          )}
-          {experienceLevel && (
-            <MetaChip
-              icon={UserIcon}
-              label={experienceLevel}
-              colorClass="bg-amber-500/8 text-amber-700 dark:text-amber-400 ring-amber-500/20"
-            />
-          )}
-          {salary && (
-            <MetaChip
-              icon={Money01Icon}
-              label={salary}
-              colorClass="bg-emerald-500/8 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20"
-            />
-          )}
-        </div>
-
-        {/* ── Row 3: Description reveal ─────────────────────────────────────── */}
-        {hasDescription && (
-          <div className="mt-3 space-y-1">
-            {descIsHtml ? (
-              <div
-                className={cn(
-                  "job-desc-html overflow-hidden transition-all duration-300",
-                  expanded ? "max-h-[2000px]" : "max-h-[3.6rem]"
+            {/* Title + Company */}
+            <div className="min-w-0 flex-1 space-y-0.5">
+              <div className="flex flex-wrap items-start gap-2">
+                <h3 className="text-sm font-bold leading-snug tracking-tight text-foreground transition-colors group-hover/job:text-primary">
+                  {title}
+                </h3>
+                {statusLabel && (
+                  <span
+                    className={cn(
+                      "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset",
+                      statusColorClasses[statusLabel.color].bg,
+                      statusColorClasses[statusLabel.color].text,
+                      statusColorClasses[statusLabel.color].ring
+                    )}
+                  >
+                    <HugeiconsIcon
+                      icon={statusLabel.icon}
+                      strokeWidth={2.5}
+                      className={cn("size-3", (isDetecting || isApplying) && "animate-spin")}
+                    />
+                    {statusLabel.label}
+                  </span>
                 )}
-                dangerouslySetInnerHTML={{ __html: sanitizeHtml(description!) }}
-              />
-            ) : (
-              <p
+              </div>
+              <p className="text-xs font-semibold text-muted-foreground">{company}</p>
+
+              {/* Platform badge */}
+              <span
                 className={cn(
-                  "text-[12px] leading-relaxed text-muted-foreground transition-all duration-300",
-                  expanded ? "line-clamp-none whitespace-pre-line" : "line-clamp-2"
+                  "mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset",
+                  ps.badge,
+                  ps.ring
                 )}
               >
-                {description}
-              </p>
-            )}
-            {isLong && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  setExpanded((prev) => !prev)
-                }}
-                className="cursor-pointer text-[11px] font-bold text-primary hover:underline focus-visible:outline-none inline-flex items-center gap-1 py-0.5"
-              >
-                {expanded ? "Show less ↑" : "Show more ↓"}
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* ── Row 4: Skills / Tags ──────────────────────────────────────────── */}
-        {tags && tags.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {tags.slice(0, 7).map((tag) => (
-              <SkillTag key={tag} label={tag} />
-            ))}
-            {tags.length > 7 && (
-              <span className="inline-flex items-center rounded-md bg-muted/50 px-2 py-0.5 text-[11px] font-semibold text-muted-foreground ring-1 ring-inset ring-border/40">
-                +{tags.length - 7} more
+                <PlatformLogo platform={platform} size="xs" />
+                {platformMeta?.label ?? platform}
               </span>
+            </div>
+
+            {/* Match Score Ring */}
+            <div className="shrink-0 flex flex-col items-center gap-0.5">
+              <ScoreRing score={matchScore} />
+              <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                Match
+              </span>
+            </div>
+          </div>
+
+          {/* ── Row 2: Meta chips ─────────────────────────────────────────────── */}
+          <div className="mt-3.5 flex flex-wrap gap-1.5">
+            {location && (
+              <MetaChip
+                icon={Location01Icon}
+                label={location}
+                colorClass="bg-sky-500/8 text-sky-700 dark:text-sky-400 ring-sky-500/20"
+              />
+            )}
+            {jobType && (
+              <MetaChip
+                icon={Clock01Icon}
+                label={jobType}
+                colorClass="bg-violet-500/8 text-violet-700 dark:text-violet-400 ring-violet-500/20"
+              />
+            )}
+            {experienceLevel && (
+              <MetaChip
+                icon={UserIcon}
+                label={experienceLevel}
+                colorClass="bg-amber-500/8 text-amber-700 dark:text-amber-400 ring-amber-500/20"
+              />
+            )}
+            {salary && (
+              <MetaChip
+                icon={Money01Icon}
+                label={salary}
+                colorClass="bg-emerald-500/8 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20"
+              />
             )}
           </div>
-        )}
 
-        {/* ── Divider ───────────────────────────────────────────────────────── */}
-        <div className="mt-4 border-t border-border/40" />
-
-        {/* ── Row 5: Source + Actions ───────────────────────────────────────── */}
-        <div className="mt-3 flex items-center justify-between gap-2">
-          {/* Source domain */}
-          <a
-            href={jobUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground/60 hover:text-muted-foreground transition-colors"
-          >
-            <HugeiconsIcon icon={Link01Icon} strokeWidth={2} className="size-3" />
-            {platformMeta?.domain ?? "View source"}
-          </a>
-
-          <div className="flex items-center gap-2">
-            {/* Bookmark */}
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => onSave(id, !savedStatus)}
-              className={cn(
-                "size-8 rounded-xl border-border/50 transition-all duration-200",
-                savedStatus
-                  ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/20"
-                  : "text-muted-foreground hover:border-border hover:text-foreground"
-              )}
-              aria-label={savedStatus ? "Unsave job" : "Save job"}
-            >
-              <HugeiconsIcon
-                icon={savedStatus ? Bookmark02Icon : Bookmark01Icon}
-                strokeWidth={2}
-                className="size-4"
-              />
-            </Button>
-
-            {/* Apply */}
-            <Button
-              size="sm"
-              onClick={() => !appliedStatus && onApply(id)}
-              disabled={appliedStatus}
-              className={cn(
-                "group/apply h-8 gap-1.5 rounded-xl px-4 text-[12px] font-bold shadow-sm transition-all duration-300 active:scale-[0.97]",
-                appliedStatus
-                  ? "cursor-default bg-muted text-muted-foreground"
-                  : "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md hover:shadow-primary/25"
-              )}
-            >
-              {appliedStatus ? (
-                <>
+          {/* ── Human Verification Banner ──────────────────────────── */}
+          {isNeedsHuman && (
+            <div className="mt-3 rounded-xl border border-primary/40 bg-primary/10 p-3 text-xs text-primary space-y-2">
+              <div className="flex items-start gap-2">
+                <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={2.5} className="size-4 mt-0.5 shrink-0" />
+                <div className="space-y-1">
+                  <span className="font-bold text-xs">🛑 Human Verification Required</span>
+                  <p className="text-[11px] opacity-90">
+                    {applicationError || "A CAPTCHA or security check is blocking the bot. Open the live session to solve it."}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {(browserbaseDebugUrl || browserbaseSessionId) && (
+                  <a
+                    href={browserbaseDebugUrl || `https://app.steel.dev/sessions/${browserbaseSessionId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-[11px] font-bold text-primary-foreground shadow-xs transition-colors hover:bg-primary/90"
+                  >
+                    <HugeiconsIcon icon={ViewIcon} strokeWidth={2.5} className="size-3.5" />
+                    👁️ View Live Session
+                  </a>
+                )}
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={async () => {
+                    const result = await resumeAfterHumanVerification(id)
+                    if (result.error) {
+                      toast.add({ type: "error", title: "Continuation failed", description: result.error })
+                    } else {
+                      window.location.reload()
+                    }
+                  }}
+                  className="gap-1.5 rounded-lg bg-emerald-600 px-3 py-1 text-[11px] font-bold text-white shadow-xs hover:bg-emerald-700 transition-colors"
+                >
                   <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2.5} className="size-3.5" />
-                  Applied
-                </>
+                  ✅ I've Solved It, Continue
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Missing Profile Info Alert Banner ──────────────────────────── */}
+          {isMissingInfo && (
+            <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+                <div className="space-y-0.5">
+                  <span className="font-bold flex items-center gap-1 text-xs">
+                    <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={2.5} className="size-3.5 text-amber-600" />
+                    Missing Required Profile Information
+                  </span>
+                  <p className="text-[11px] opacity-90">
+                    Required fields: <span className="font-semibold">{missingFields?.join(", ") || "Phone, Resume"}</span>. Complete them now to continue AI application.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setIsMissingModalOpen(true)}
+                    className="gap-1.5 rounded-lg bg-amber-600 px-3 py-1 text-[11px] font-bold text-white shadow-xs hover:bg-amber-700 transition-colors"
+                  >
+                    <HugeiconsIcon icon={SparklesIcon} strokeWidth={2.5} className="size-3.5" />
+                    Fill Missing Data
+                  </Button>
+                  <a
+                    href={`/dashboard/profile?missing=${encodeURIComponent((missingFields || []).join(","))}`}
+                    className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 hover:underline"
+                  >
+                    Edit Profile
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Unknown Form Fields Banner ──────────────────────────────── */}
+          {isUnknownFormFields && (
+            <div className="mt-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-800 dark:text-rose-200">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+                <div className="space-y-0.5">
+                  <span className="font-bold flex items-center gap-1 text-xs">
+                    <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={2.5} className="size-3.5 text-rose-600" />
+                    Unknown Required Fields Detected
+                  </span>
+                  <p className="text-[11px] opacity-90">
+                    The bot found {unknownFormFields?.length || 0} unknown required field(s):{" "}
+                    <span className="font-semibold">{unknownFormFields?.map((f) => f.label).join(", ") || "Unknown"}</span>. Fill them to retry.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setIsUnknownFieldsModalOpen(true)}
+                    className="gap-1.5 rounded-lg bg-rose-600 px-3 py-1 text-[11px] font-bold text-white shadow-xs hover:bg-rose-700 transition-colors"
+                  >
+                    <HugeiconsIcon icon={SparklesIcon} strokeWidth={2.5} className="size-3.5" />
+                    Fill Unknown Fields
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Uncertain Status Banner ───────────────────────────────────── */}
+          {isUncertain && (
+            <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200 space-y-2">
+              <div className="flex items-start gap-2">
+                <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={2.5} className="size-4 mt-0.5 shrink-0" />
+                <div className="space-y-1">
+                  <span className="font-bold">⚠️ Submission Uncertain</span>
+                  <p className="text-[11px] opacity-90">
+                    {applicationError || "The bot could not confirm whether the application was submitted. Please review the recording or screenshot."}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {(browserbaseDebugUrl || browserbaseSessionId) && (
+                  <a
+                    href={browserbaseDebugUrl || `https://app.steel.dev/sessions/${browserbaseSessionId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-[11px] font-bold text-white shadow-xs transition-colors hover:bg-amber-700"
+                  >
+                    <HugeiconsIcon icon={ViewIcon} strokeWidth={2.5} className="size-3.5" />
+                    View Live Session
+                  </a>
+                )}
+                {onAutoApply && (
+                  <Button
+                    size="sm"
+                    className="h-7 gap-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 text-[11px]"
+                    onClick={() => onAutoApply(id)}
+                  >
+                    <HugeiconsIcon icon={SparklesIcon} strokeWidth={2.5} className="size-3" />
+                    Retry Auto-Apply
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Failed Error Banner ───────────────────────────────────────── */}
+          {isFailed && (
+            <div className="mt-3 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive space-y-2">
+              <div>
+                <span className="font-bold">Application Failed:</span>{" "}
+                {applicationError || "Could not auto-submit application."}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 gap-1.5 rounded-lg border-destructive/40 text-destructive hover:bg-destructive/10 text-[11px]"
+                  onClick={() => setIsMissingModalOpen(true)}
+                >
+                  <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={2.5} className="size-3" />
+                  Fill / Fix Data
+                </Button>
+                {onAutoApply && (
+                  <Button
+                    size="sm"
+                    className="h-7 gap-1.5 rounded-lg bg-destructive/80 text-white hover:bg-destructive text-[11px]"
+                    onClick={() => onAutoApply(id)}
+                  >
+                    <HugeiconsIcon icon={SparklesIcon} strokeWidth={2.5} className="size-3" />
+                    Retry Auto-Apply
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Row 3: Description reveal ─────────────────────────────────────── */}
+          {hasDescription && (
+            <div className="mt-3 space-y-1">
+              {descIsHtml ? (
+                <div
+                  className={cn(
+                    "job-desc-html overflow-hidden transition-all duration-300",
+                    expanded ? "max-h-[2000px]" : "max-h-[3.6rem]"
+                  )}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(description!) }}
+                />
               ) : (
-                <>
-                  Apply Now
-                  <HugeiconsIcon
-                    icon={ArrowUpRightIcon}
-                    strokeWidth={2.5}
-                    className="size-3.5 transition-transform duration-300 group-hover/apply:translate-x-0.5 group-hover/apply:-translate-y-0.5"
-                  />
-                </>
+                <p
+                  className={cn(
+                    "text-[12px] leading-relaxed text-muted-foreground transition-all duration-300",
+                    expanded ? "line-clamp-none whitespace-pre-line" : "line-clamp-2"
+                  )}
+                >
+                  {description}
+                </p>
               )}
-            </Button>
+              {isLong && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setExpanded((prev) => !prev)
+                  }}
+                  className="cursor-pointer text-[11px] font-bold text-primary hover:underline focus-visible:outline-none inline-flex items-center gap-1 py-0.5"
+                >
+                  {expanded ? "Show less ↑" : "Show more ↓"}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* ── Row 4: Skills / Tags ──────────────────────────────────────────── */}
+          {tags && tags.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {tags.slice(0, 7).map((tag) => (
+                <SkillTag key={tag} label={tag} />
+              ))}
+              {tags.length > 7 && (
+                <span className="inline-flex items-center rounded-md bg-muted/50 px-2 py-0.5 text-[11px] font-semibold text-muted-foreground ring-1 ring-inset ring-border/40">
+                  +{tags.length - 7} more
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* ── Divider ───────────────────────────────────────────────────────── */}
+          <div className="mt-4 border-t border-border/40" />
+
+          {/* ── Row 5: Source + Debug + Actions ────────────────────────────────── */}
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3">
+              {/* Source domain */}
+              <a
+                href={jobUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+              >
+                <HugeiconsIcon icon={Link01Icon} strokeWidth={2} className="size-3" />
+                {platformMeta?.domain ?? "View source"}
+              </a>
+
+              {/* Debug Session Link — LIVE when bot is active */}
+              {(browserbaseDebugUrl || browserbaseSessionId) && (
+                <a
+                  href={browserbaseDebugUrl || `https://app.steel.dev/sessions/${browserbaseSessionId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    "inline-flex items-center gap-1 text-[11px] font-bold transition-colors",
+                    (isDetecting || isApplying || isNeedsHuman)
+                      ? "text-red-500 hover:text-red-600 animate-pulse"
+                      : "text-primary hover:underline"
+                  )}
+                  title={isDetecting || isApplying ? "🔴 Watch the bot live in real-time!" : "View Steel session recording"}
+                >
+                  {(isDetecting || isApplying || isNeedsHuman) && (
+                    <span className="flex size-2 rounded-full bg-red-500" />
+                  )}
+                  <HugeiconsIcon icon={ViewIcon} strokeWidth={2} className="size-3" />
+                  {isDetecting || isApplying || isNeedsHuman ? "🔴 Watch Live" : "Debug Session"}
+                </a>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Bookmark */}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => onSave(id, !savedStatus)}
+                className={cn(
+                  "size-8 rounded-xl border-border/50 transition-all duration-200",
+                  savedStatus
+                    ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/20"
+                    : "text-muted-foreground hover:border-border hover:text-foreground"
+                )}
+                aria-label={savedStatus ? "Unsave job" : "Save job"}
+              >
+                <HugeiconsIcon
+                  icon={savedStatus ? Bookmark02Icon : Bookmark01Icon}
+                  strokeWidth={2}
+                  className="size-4"
+                />
+              </Button>
+
+              {/* Apply */}
+              <Button
+                size="sm"
+                onClick={() => {
+                  if (isFailed || isUncertain) {
+                    if (onAutoApply) onAutoApply(id)
+                  } else if (isMissingInfo) {
+                    setIsMissingModalOpen(true)
+                  } else if (isUnknownFormFields) {
+                    setIsUnknownFieldsModalOpen(true)
+                  } else if (isNeedsHuman) {
+                    if (browserbaseDebugUrl || browserbaseSessionId) {
+                      window.open(
+                        browserbaseDebugUrl || `https://app.steel.dev/sessions/${browserbaseSessionId}`,
+                        "_blank",
+                        "noopener,noreferrer"
+                      )
+                    }
+                  } else {
+                    handleApplyClick()
+                  }
+                }}
+                disabled={isCompleted || isDetecting || isApplying || (isNeedsHuman && !browserbaseDebugUrl && !browserbaseSessionId)}
+                className={cn(
+                  "group/apply h-8 gap-1.5 rounded-xl px-4 text-[12px] font-bold shadow-sm transition-all duration-300 active:scale-[0.97]",
+                  isCompleted
+                    ? "cursor-default bg-muted text-muted-foreground"
+                    : isFailed || isUncertain
+                    ? "bg-rose-600 text-white hover:bg-rose-700 hover:shadow-md hover:shadow-rose-500/25"
+                    : isMissingInfo || isUnknownFormFields
+                    ? "bg-amber-600 text-white hover:bg-amber-700 hover:shadow-md hover:shadow-amber-500/25"
+                    : isNeedsHuman
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md hover:shadow-primary/25"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md hover:shadow-primary/25"
+                )}
+              >
+                {isCompleted ? (
+                  <>
+                    <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2.5} className="size-3.5" />
+                    Applied
+                  </>
+                ) : isDetecting ? (
+                  <>
+                    <HugeiconsIcon icon={Loading02Icon} strokeWidth={2.5} className="size-3.5 animate-spin" />
+                    Detecting...
+                  </>
+                ) : isApplying ? (
+                  <>
+                    <HugeiconsIcon icon={SparklesIcon} strokeWidth={2.5} className="size-3.5 animate-spin" />
+                    Applying...
+                  </>
+                ) : isFailed ? (
+                  <>
+                    <HugeiconsIcon icon={SparklesIcon} strokeWidth={2.5} className="size-3.5" />
+                    Retry Auto-Apply
+                  </>
+                ) : isUncertain ? (
+                  <>
+                    <HugeiconsIcon icon={SparklesIcon} strokeWidth={2.5} className="size-3.5" />
+                    Retry
+                  </>
+                ) : isMissingInfo || isUnknownFormFields ? (
+                  <>
+                    <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={2.5} className="size-3.5" />
+                    Fix & Apply
+                  </>
+                ) : isNeedsHuman ? (
+                  <>
+                    <HugeiconsIcon icon={ViewIcon} strokeWidth={2.5} className="size-3.5" />
+                    View Session
+                  </>
+                ) : (
+                  <>
+                    Apply Now
+                    <HugeiconsIcon
+                      icon={ArrowUpRightIcon}
+                      strokeWidth={2.5}
+                      className="size-3.5 transition-transform duration-300 group-hover/apply:translate-x-0.5 group-hover/apply:-translate-y-0.5"
+                    />
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </>
   )
 }
+

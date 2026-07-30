@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -16,6 +16,7 @@ import {
   FolderIcon,
   Certificate01Icon,
   LinkIcon,
+  AlertCircleIcon,
 } from "@hugeicons/core-free-icons"
 
 import { Button } from "@/components/ui/button";
@@ -119,8 +120,30 @@ export function ProfileForm({
     }
   };
 
+  const searchParams = useSearchParams();
+  const missingParam = searchParams.get("missing");
+  const missingFieldsList = missingParam ? missingParam.split(",").filter(Boolean) : [];
+
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      {missingFieldsList.length > 0 && (
+        <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-amber-900 dark:text-amber-200 shadow-sm animate-in fade-in">
+          <div className="flex items-start gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300">
+              <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={2.5} className="size-5" />
+            </div>
+            <div className="space-y-1 text-xs">
+              <h4 className="font-bold text-sm">Action Required for Automated Application</h4>
+              <p className="leading-relaxed">
+                The automated job application process identified missing required fields in your profile:{" "}
+                <span className="font-bold underline">{missingFieldsList.join(", ")}</span>.
+              </p>
+              <p className="opacity-90">Please fill in these details below and click &quot;Save Profile&quot; to continue.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Tabs defaultValue="personal" className="space-y-6">
         <div className="overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <TabsList className="inline-flex h-auto w-max min-w-full gap-1.5 rounded-2xl bg-card/60 p-1.5 border border-border/50 backdrop-blur-md shadow-sm">
@@ -158,7 +181,7 @@ export function ProfileForm({
                       <Input
                         {...form.register("fullName")}
                         placeholder="John Doe"
-                        className="rounded-xl border-border/60 bg-background/60"
+                        className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -166,7 +189,7 @@ export function ProfileForm({
                       <Input
                         {...form.register("title")}
                         placeholder="e.g. Senior React Developer"
-                        className="rounded-xl border-border/60 bg-background/60"
+                        className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -175,7 +198,7 @@ export function ProfileForm({
                         {...form.register("email")}
                         type="email"
                         placeholder="john@example.com"
-                        className="rounded-xl border-border/60 bg-background/60"
+                        className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -183,7 +206,7 @@ export function ProfileForm({
                       <Input
                         {...form.register("phone")}
                         placeholder="+1 (555) 000-0000"
-                        className="rounded-xl border-border/60 bg-background/60"
+                        className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                       />
                     </div>
                     <div className="space-y-1.5 sm:col-span-2">
@@ -191,7 +214,7 @@ export function ProfileForm({
                       <Input
                         {...form.register("location")}
                         placeholder="City, Country or Remote"
-                        className="rounded-xl border-border/60 bg-background/60"
+                        className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                       />
                     </div>
                     <div className="space-y-1.5 sm:col-span-2">
@@ -200,7 +223,7 @@ export function ProfileForm({
                         rows={4}
                         {...form.register("summary")}
                         placeholder="A brief summary of your expertise and goals..."
-                        className="rounded-xl border-border/60 bg-background/60"
+                        className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                       />
                     </div>
                   </CardContent>
@@ -238,7 +261,7 @@ export function ProfileForm({
                             )
                           }
                           placeholder="React, TypeScript, Next.js, Node.js, GraphQL, PostgreSQL, Tailwind CSS"
-                          className="rounded-xl border-border/60 bg-background/60"
+                          className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                         />
                       )}
                     />
@@ -330,7 +353,7 @@ export function ProfileForm({
                                     <Input
                                       {...form.register(`workExperience.${index}.company`)}
                                       placeholder="Acme Inc."
-                                      className="rounded-xl border-border/60 bg-background/60"
+                                      className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                                     />
                                   </div>
                                   <div className="space-y-1.5">
@@ -338,7 +361,7 @@ export function ProfileForm({
                                     <Input
                                       {...form.register(`workExperience.${index}.title`)}
                                       placeholder="Senior Software Engineer"
-                                      className="rounded-xl border-border/60 bg-background/60"
+                                      className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                                     />
                                   </div>
                                   <div className="space-y-1.5">
@@ -346,7 +369,7 @@ export function ProfileForm({
                                     <Input
                                       {...form.register(`workExperience.${index}.duration`)}
                                       placeholder="Jan 2022 - Present"
-                                      className="rounded-xl border-border/60 bg-background/60"
+                                      className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                                     />
                                   </div>
                                   <div className="space-y-1.5">
@@ -354,7 +377,7 @@ export function ProfileForm({
                                     <Input
                                       {...form.register(`workExperience.${index}.location`)}
                                       placeholder="San Francisco, CA or Remote"
-                                      className="rounded-xl border-border/60 bg-background/60"
+                                      className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                                     />
                                   </div>
                                   <div className="space-y-1.5 sm:col-span-2">
@@ -375,7 +398,7 @@ export function ProfileForm({
                                             )
                                           }
                                           placeholder="One accomplishment or duty per line..."
-                                          className="rounded-xl border-border/60 bg-background/60"
+                                          className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                                         />
                                       )}
                                     />
@@ -472,7 +495,7 @@ export function ProfileForm({
                                     <Input
                                       {...form.register(`education.${index}.institution`)}
                                       placeholder="Stanford University"
-                                      className="rounded-xl border-border/60 bg-background/60"
+                                      className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                                     />
                                   </div>
                                   <div className="space-y-1.5">
@@ -480,7 +503,7 @@ export function ProfileForm({
                                     <Input
                                       {...form.register(`education.${index}.degree`)}
                                       placeholder="Bachelor of Science"
-                                      className="rounded-xl border-border/60 bg-background/60"
+                                      className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                                     />
                                   </div>
                                   <div className="space-y-1.5">
@@ -488,7 +511,7 @@ export function ProfileForm({
                                     <Input
                                       {...form.register(`education.${index}.fieldOfStudy`)}
                                       placeholder="Computer Science"
-                                      className="rounded-xl border-border/60 bg-background/60"
+                                      className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                                     />
                                   </div>
                                   <div className="space-y-1.5">
@@ -496,7 +519,7 @@ export function ProfileForm({
                                     <Input
                                       {...form.register(`education.${index}.duration`)}
                                       placeholder="2018 - 2022"
-                                      className="rounded-xl border-border/60 bg-background/60"
+                                      className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                                     />
                                   </div>
                                   <div className="space-y-1.5">
@@ -504,7 +527,7 @@ export function ProfileForm({
                                     <Input
                                       {...form.register(`education.${index}.location`)}
                                       placeholder="Stanford, CA"
-                                      className="rounded-xl border-border/60 bg-background/60"
+                                      className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                                     />
                                   </div>
                                   <div className="space-y-1.5">
@@ -512,7 +535,7 @@ export function ProfileForm({
                                     <Input
                                       {...form.register(`education.${index}.gpa`)}
                                       placeholder="3.8 / 4.0"
-                                      className="rounded-xl border-border/60 bg-background/60"
+                                      className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                                     />
                                   </div>
                                 </div>
@@ -599,7 +622,7 @@ export function ProfileForm({
                                     <Input
                                       {...form.register(`projects.${index}.name`)}
                                       placeholder="AI Job Application Agent"
-                                      className="rounded-xl border-border/60 bg-background/60"
+                                      className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                                     />
                                   </div>
                                   <div className="space-y-1.5">
@@ -607,7 +630,7 @@ export function ProfileForm({
                                     <Input
                                       {...form.register(`projects.${index}.link`)}
                                       placeholder="https://github.com/..."
-                                      className="rounded-xl border-border/60 bg-background/60"
+                                      className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                                     />
                                   </div>
                                   <div className="space-y-1.5 sm:col-span-2">
@@ -616,7 +639,7 @@ export function ProfileForm({
                                       rows={3}
                                       {...form.register(`projects.${index}.description`)}
                                       placeholder="Overview of technologies used and key outcomes..."
-                                      className="rounded-xl border-border/60 bg-background/60"
+                                      className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                                     />
                                   </div>
                                 </div>
@@ -703,7 +726,7 @@ export function ProfileForm({
                                     <Input
                                       {...form.register(`certifications.${index}.name`)}
                                       placeholder="AWS Certified Solutions Architect"
-                                      className="rounded-xl border-border/60 bg-background/60"
+                                      className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                                     />
                                   </div>
                                   <div className="space-y-1.5">
@@ -711,7 +734,7 @@ export function ProfileForm({
                                     <Input
                                       {...form.register(`certifications.${index}.issuer`)}
                                       placeholder="Amazon Web Services"
-                                      className="rounded-xl border-border/60 bg-background/60"
+                                      className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                                     />
                                   </div>
                                   <div className="space-y-1.5">
@@ -719,7 +742,7 @@ export function ProfileForm({
                                     <Input
                                       {...form.register(`certifications.${index}.date`)}
                                       placeholder="2023"
-                                      className="rounded-xl border-border/60 bg-background/60"
+                                      className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                                     />
                                   </div>
                                   <div className="space-y-1.5">
@@ -727,7 +750,7 @@ export function ProfileForm({
                                     <Input
                                       {...form.register(`certifications.${index}.link`)}
                                       placeholder="https://..."
-                                      className="rounded-xl border-border/60 bg-background/60"
+                                      className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                                     />
                                   </div>
                                 </div>
@@ -778,7 +801,7 @@ export function ProfileForm({
                             <Input
                               {...form.register(`links.${index}.label`)}
                               placeholder="e.g. LinkedIn"
-                              className="rounded-xl border-border/60 bg-background/60"
+                              className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                             />
                           </div>
                           <div className="space-y-1.5">
@@ -786,7 +809,7 @@ export function ProfileForm({
                             <Input
                               {...form.register(`links.${index}.url`)}
                               placeholder="https://linkedin.com/in/..."
-                              className="rounded-xl border-border/60 bg-background/60"
+                              className="rounded-xl border-border bg-background/80 shadow-2xs focus-visible:border-primary"
                             />
                           </div>
                         </div>
@@ -814,7 +837,13 @@ export function ProfileForm({
 
           <div className="lg:col-span-1">
             <div className="lg:sticky lg:top-6">
-              <ProfileCompletenessCard data={watchedData} />
+              <ProfileCompletenessCard
+                data={watchedData}
+                onGenerateComplete={(generated) => {
+                  form.reset(generated)
+                  setSaveMessage("AI-generated sections added. Review and save.");
+                }}
+              />
             </div>
           </div>
         </div>

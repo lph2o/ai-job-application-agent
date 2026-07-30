@@ -67,7 +67,7 @@ export function ProfileHero({ data, className }: ProfileHeroProps) {
                   colorClass
                 )}
               >
-                {getInitials(data?.fullName)}
+                {getInitials(data?.fullName || undefined)}
               </div>
             </div>
             <div className="absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md ring-2 ring-card">

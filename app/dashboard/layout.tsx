@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/sidebar"
 import { createClient } from "@/lib/supabase/server"
 import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog"
+import { Toaster } from "@/components/ui/toast"
 
 export default async function DashboardLayout({
   children,
@@ -60,8 +61,10 @@ export default async function DashboardLayout({
           email={email}
           initials={initials}
         />
-        {children}
-        {needsOnboarding && <OnboardingDialog open={true} />}
+        <Toaster>
+          {children}
+          {needsOnboarding && <OnboardingDialog open={true} />}
+        </Toaster>
       </SidebarInset>
     </SidebarProvider>
   )

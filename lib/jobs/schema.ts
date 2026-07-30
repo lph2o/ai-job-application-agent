@@ -24,6 +24,25 @@ export const JobSchema = z.object({
 
 export type Job = z.infer<typeof JobSchema>
 
+/** Superset of Job that includes the application-automation columns
+ *  stored on the same `jobs` table (application_status, session ids, etc.). */
+export type JobWithApplication = Job & {
+  application_status?: string | null
+  missing_fields?: string[] | null
+  detected_fields?: Array<{ name: string; label: string; type: string; required: boolean }> | null
+  browserbase_session_id?: string | null
+  browserbase_debug_url?: string | null
+  steel_websocket_url?: string | null
+  unknown_form_fields?: Array<{ label: string; name: string; type: string }> | null
+  unknown_field_answers?: Record<string, string> | null
+  application_error?: string | null
+  application_screenshot_url?: string | null
+  application_final_url?: string | null
+  application_final_title?: string | null
+}
+
+export type ApplicationStatus = NonNullable<JobWithApplication["application_status"]>
+
 export const PLATFORMS = [
   {
     key: "greenhouse" as const,

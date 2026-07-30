@@ -1,6 +1,9 @@
 -- Enable Row Level Security on jobs table
 alter table jobs enable row level security;
 
+-- Drop if exists to avoid conflicts from previous partial runs
+drop policy if exists "Users can manage their own jobs" on jobs;
+
 -- Users can only read, insert, update, and delete their own jobs
 create policy "Users can manage their own jobs"
   on jobs

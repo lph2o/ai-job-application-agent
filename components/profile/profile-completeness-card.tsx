@@ -13,6 +13,7 @@ import {
   LinkIcon,
   ArrowRight01Icon,
   CheckmarkCircle02Icon,
+  SparklesIcon,
 } from "@hugeicons/core-free-icons"
 
 import {
@@ -31,10 +32,14 @@ import {
 } from "@/lib/profile/completeness"
 import type { ResumeProfile } from "@/lib/resume/schema"
 import { cn } from "@/lib/utils"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { generateMissingProfileSections, updateProfile, type SectionKey } from "@/app/actions/onboarding"
 
 interface ProfileCompletenessCardProps {
   data?: ResumeProfile | null
   className?: string
+  onGenerateComplete?: (data: ResumeProfile) => void
 }
 
 const sectionIcons: Record<string, React.ReactNode> = {
@@ -50,11 +55,40 @@ const sectionIcons: Record<string, React.ReactNode> = {
 export function ProfileCompletenessCard({
   data,
   className,
+  onGenerateComplete,
 }: ProfileCompletenessCardProps) {
   const result = React.useMemo(() => calculateProfileCompleteness(data), [data])
   const colorClass = getProgressColor(result.percentage)
   const bgClass = getProgressBackgroundColor(result.percentage)
   const isComplete = result.percentage === 100
+  const [generatingSection, setGeneratingSection] = React.useState<string | null>(null)
+  const router = useRouter()
+
+  const handleGenerate = async (sectionKey?: string) => {
+    if (!data || generatingSection) return
+    setGeneratingSection(sectionKey ?? "all")
+    try {
+      const result = await generateMissingProfileSections(data, sectionKey as SectionKey)
+      if (result.error) {
+        console.error("Profile AI generation failed:", result.error)
+        return
+      }
+      if (!result.data) return
+
+      if (onGenerateComplete) {
+        onGenerateComplete(result.data)
+      } else {
+        const saveResult = await updateProfile(result.data)
+        if (saveResult.error) {
+          console.error("Failed to save generated profile:", saveResult.error)
+        } else {
+          router.refresh()
+        }
+      }
+    } finally {
+      setGeneratingSection(null)
+    }
+  }
 
   return (
     <Card className={cn("h-fit", className)}>
@@ -117,13 +151,43 @@ export function ProfileCompletenessCard({
                 : "Complete missing sections to improve match accuracy and ranking."}
             </p>
             {!isComplete && (
-              <Link
-                href="/dashboard/profile"
-                className="inline-flex items-center gap-1 text-sm font-medium text-primary transition-colors hover:text-primary/80"
-              >
-                Complete profile
-                <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-3.5" />
-              </Link>
+              <div className="flex flex-wrap items-center gap-2">
+                <Link
+                  href="/dashboard/profile"
+                  className="inline-flex items-center gap-1 text-sm font-medium text-primary transition-colors hover:text-primary/80"
+                >
+                  Complete profile
+                  <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-3.5" />
+                </Link>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleGenerate()}
+                  disabled={!!generatingSection}
+                  className="h-8 gap-1.5 rounded-full border-primary/30 bg-primary/5 px-3 text-xs font-semibold text-primary hover:bg-primary/10"
+                >
+                  {generatingSection ? (
+                    <>
+                      <HugeiconsIcon
+                        icon={SparklesIcon}
+                        strokeWidth={2.5}
+                        className="size-3.5 animate-spin"
+                      />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <HugeiconsIcon
+                        icon={SparklesIcon}
+                        strokeWidth={2.5}
+                        className="size-3.5"
+                      />
+                      Generate with AI
+                    </>
+                  )}
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -140,14 +204,41 @@ export function ProfileCompletenessCard({
                     {section.label}
                   </span>
                 </div>
-                <span
-                  className={cn(
-                    "shrink-0 text-xs font-semibold tabular-nums",
-                    getProgressColor(section.percentage)
+                <div className="flex items-center gap-1.5">
+                  {!isComplete && section.percentage < 100 && (
+                    <button
+                      type="button"
+                      onClick={() => handleGenerate(section.key)}
+                      disabled={!!generatingSection}
+                      className="inline-flex items-center gap-0.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
+                    >
+                      {generatingSection === section.key ? (
+                        <HugeiconsIcon
+                          icon={SparklesIcon}
+                          strokeWidth={2.5}
+                          className="size-3 animate-spin"
+                        />
+                      ) : (
+                        <>
+                          <HugeiconsIcon
+                            icon={SparklesIcon}
+                            strokeWidth={2.5}
+                            className="size-3"
+                          />
+                          AI
+                        </>
+                      )}
+                    </button>
                   )}
-                >
-                  {section.percentage}%
-                </span>
+                  <span
+                    className={cn(
+                      "shrink-0 text-xs font-semibold tabular-nums",
+                      getProgressColor(section.percentage)
+                    )}
+                  >
+                    {section.percentage}%
+                  </span>
+                </div>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
                 <div

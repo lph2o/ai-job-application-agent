@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowDown01Icon, ArrowUp01Icon } from "@hugeicons/core-free-icons"
 
-function Accordion({ className, ...props }: AccordionPrimitive.Root.Props) {
+function Accordion({ className, type, ...props }: AccordionPrimitive.Root.Props & { type?: string }) {
   return (
     <AccordionPrimitive.Root
       data-slot="accordion"

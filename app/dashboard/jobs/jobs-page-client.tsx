@@ -21,8 +21,8 @@ import { JobCard } from "@/components/jobs/job-card"
 import { JobCardSkeleton } from "@/components/jobs/job-card-skeleton"
 import { RecentActivity } from "@/components/jobs/recent-activity"
 import { ProfileCompletenessCard } from "@/components/profile/profile-completeness-card"
-import { fetchAllJobs, toggleSaveJob, toggleAppliedJob } from "@/app/actions/jobs"
-import { PLATFORMS, type Platform, type Job } from "@/lib/jobs/schema"
+import { fetchAllJobs, toggleSaveJob, toggleAppliedJob, markJobAppliedManually, startAutoApplyJob } from "@/app/actions/jobs"
+import { type Platform, type JobWithApplication } from "@/lib/jobs/schema"
 import { normalizeProfile, type ResumeProfile } from "@/lib/resume/schema"
 import { cn } from "@/lib/utils"
 
@@ -53,7 +53,7 @@ export function JobsPageClient({
     "workable",
     "wellfound",
   ])
-  const [jobs, setJobs] = React.useState<Job[]>([])
+  const [jobs, setJobs] = React.useState<JobWithApplication[]>([])
   const [searchQuery, setSearchQuery] = React.useState("")
   const [isLoading, setIsLoading] = React.useState(true)
   const [isRefreshing, setIsRefreshing] = React.useState(false)
@@ -147,6 +147,27 @@ export function JobsPageClient({
 
     router.refresh()
     window.open(job.job_url, "_blank", "noopener,noreferrer")
+  }
+
+  const handleManualApply = async (jobId: string, url: string) => {
+    setJobs((prev) =>
+      prev.map((j) =>
+        j.id === jobId ? { ...j, applied_status: true, application_status: "applied" } : j
+      )
+    )
+    await markJobAppliedManually(jobId)
+    window.open(url, "_blank", "noopener,noreferrer")
+    router.refresh()
+  }
+
+  const handleAutoApply = async (jobId: string) => {
+    setJobs((prev) =>
+      prev.map((j) =>
+        j.id === jobId ? { ...j, application_status: "detecting_fields" } : j
+      )
+    )
+    await startAutoApplyJob(jobId)
+    router.refresh()
   }
 
   const [sortBy, setSortBy] = React.useState<"match" | "recent" | "salary">("match")
@@ -360,8 +381,16 @@ export function JobsPageClient({
                       jobUrl={job.job_url}
                       savedStatus={job.saved_status ?? false}
                       appliedStatus={job.applied_status ?? false}
+                      applicationStatus={job.application_status}
+                      missingFields={job.missing_fields}
+                      unknownFormFields={job.unknown_form_fields}
+                      browserbaseSessionId={job.browserbase_session_id}
+                      browserbaseDebugUrl={job.browserbase_debug_url}
+                      applicationError={job.application_error}
                       onSave={handleSave}
                       onApply={handleApply}
+                      onManualApply={handleManualApply}
+                      onAutoApply={handleAutoApply}
                     />
                   ))}
                 </div>
