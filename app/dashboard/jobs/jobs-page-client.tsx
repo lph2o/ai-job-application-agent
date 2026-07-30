@@ -25,6 +25,7 @@ import { fetchAllJobs, toggleSaveJob, toggleAppliedJob, markJobAppliedManually, 
 import { type Platform, type JobWithApplication } from "@/lib/jobs/schema"
 import { normalizeProfile, type ResumeProfile } from "@/lib/resume/schema"
 import { cn } from "@/lib/utils"
+import { toast } from "@/components/ui/toast"
 
 interface JobsPageClientProps {
   userId: string
@@ -106,6 +107,13 @@ export function JobsPageClient({
 
     const result = await toggleSaveJob(jobId, saved)
     if (!result.error) {
+      toast.add({
+        type: "success",
+        title: saved ? "Job saved" : "Removed from saved",
+        description: saved
+          ? `${job.title} was added to your saved jobs.`
+          : `${job.title} was removed from your saved jobs.`,
+      })
       setActivities((prev) => [
         {
           id: `${jobId}-saved-${Date.now()}`,
@@ -117,6 +125,12 @@ export function JobsPageClient({
         },
         ...prev,
       ])
+    } else {
+      toast.add({
+        type: "error",
+        title: "Could not update save",
+        description: result.error,
+      })
     }
     router.refresh()
   }

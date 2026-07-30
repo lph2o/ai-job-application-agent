@@ -46,10 +46,26 @@ export async function fetchAllJobs(profile: ResumeProfile) {
   // Preserve existing saved/applied statuses before overwriting
   const { data: existingJobs } = await supabase
     .from("jobs")
-    .select("job_url, saved_status, applied_status")
+    .select("job_url, saved_status, applied_status, application_status")
     .eq("user_id", userId)
+
   const statusMap = new Map(
-    (existingJobs ?? []).map((j) => [j.job_url, { saved: j.saved_status, applied: j.applied_status }])
+    (existingJobs ?? []).map((j) => [
+      j.job_url,
+      { saved: j.saved_status, applied: j.applied_status },
+    ])
+  )
+
+  // URLs that must keep their row (saved, applied, or non-idle application)
+  const protectedUrls = new Set(
+    (existingJobs ?? [])
+      .filter(
+        (j) =>
+          j.saved_status === true ||
+          j.applied_status === true ||
+          (j.application_status != null && j.application_status !== "idle")
+      )
+      .map((j) => j.job_url)
   )
 
   const allNewJobs: Array<{
@@ -82,32 +98,41 @@ export async function fetchAllJobs(profile: ResumeProfile) {
     console.log(`[Jobs] ${platform}: ${fetched.length} results from Brave`)
 
     if (fetched.length > 0) {
-      // Delete stale jobs for this specific platform before inserting fresh ones
-      await supabase.from("jobs").delete().eq("user_id", userId).eq("platform", platform)
+      // Delete only unprotected stale jobs — keep saved / applied / in-progress rows
+      await supabase
+        .from("jobs")
+        .delete()
+        .eq("user_id", userId)
+        .eq("platform", platform)
+        .eq("saved_status", false)
+        .eq("applied_status", false)
+        .or("application_status.is.null,application_status.eq.idle")
 
       allNewJobs.push(
-        ...fetched.map((job) => {
-          const prev = statusMap.get(job.job_url)
-          return {
-            user_id: userId,
-            platform,
-            title: job.title,
-            company: job.company,
-            company_logo: null,
-            location: job.location,
-            salary: job.salary,
-            job_type: job.job_type,
-            experience_level: job.experience_level,
-            description: job.description,
-            tags: job.tags,
-            match_score: job.match_score,
-            job_url: job.job_url,
-            source_url: null,
-            applied_status: prev?.applied ?? false,
-            saved_status: prev?.saved ?? false,
-            fetched_at: new Date().toISOString(),
-          }
-        })
+        ...fetched
+          .filter((job) => !protectedUrls.has(job.job_url))
+          .map((job) => {
+            const prev = statusMap.get(job.job_url)
+            return {
+              user_id: userId,
+              platform,
+              title: job.title,
+              company: job.company,
+              company_logo: null,
+              location: job.location,
+              salary: job.salary,
+              job_type: job.job_type,
+              experience_level: job.experience_level,
+              description: job.description,
+              tags: job.tags,
+              match_score: job.match_score,
+              job_url: job.job_url,
+              source_url: null,
+              applied_status: prev?.applied ?? false,
+              saved_status: prev?.saved ?? false,
+              fetched_at: new Date().toISOString(),
+            }
+          })
       )
     }
   }
@@ -252,6 +277,30 @@ export async function fetchAppliedJobs() {
 
   if (error) {
     console.error("[Jobs Action] fetchAppliedJobs error:", error.message)
+    return { error: error.message, data: [] }
+  }
+
+  return { error: null, data: data ?? [] }
+}
+
+export async function fetchSavedJobs() {
+  const supabase = await createClient()
+  const { data: authData } = await supabase.auth.getClaims()
+  const userId = authData?.claims?.sub
+
+  if (!userId) {
+    return { error: "Not authenticated", data: [] }
+  }
+
+  const { data, error } = await supabase
+    .from("jobs")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("saved_status", true)
+    .order("created_at", { ascending: false })
+
+  if (error) {
+    console.error("[Jobs Action] fetchSavedJobs error:", error.message)
     return { error: error.message, data: [] }
   }
 

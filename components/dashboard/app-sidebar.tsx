@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   BriefcaseIcon,
+  Bookmark01Icon,
   ChartLineIcon,
   CoinsIcon,
   CreditCardIcon,
@@ -44,6 +45,12 @@ const navigation: NavItem[] = [
     href: "/dashboard/jobs",
     icon: BriefcaseIcon,
     description: "Discover & apply",
+  },
+  {
+    title: "Saved Jobs",
+    href: "/dashboard/saved-jobs",
+    icon: Bookmark01Icon,
+    description: "Your bookmarks",
   },
   {
     title: "Resume",
