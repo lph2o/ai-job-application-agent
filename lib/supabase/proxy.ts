@@ -33,7 +33,9 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   const isPublicRoute =
-    publicRoutes.includes(pathname) || pathname.startsWith("/auth")
+    publicRoutes.includes(pathname) ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/api/inngest")
   const isAuthRoute = authRoutes.includes(pathname)
   const isProtectedRoute = pathname.startsWith("/dashboard")
 
